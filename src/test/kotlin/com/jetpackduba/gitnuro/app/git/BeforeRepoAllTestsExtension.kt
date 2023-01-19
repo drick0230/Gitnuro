@@ -46,7 +46,13 @@ class BeforeRepoAllTestsExtension : BeforeAllCallback, AfterAllCallback {
             val cloneRepositoryUseCase =
                 CloneRepositoryUseCase(
                     HandleTransportUseCase(
-                        sessionManager = GSessionManager { GRemoteSession(ssh, credentialsStateManager) },
+                        sessionManager = GSessionManager {
+                            GRemoteSession(
+                                processProvider = { GProcess() },
+                                credentialsStateManager = credentialsStateManager,
+                                processSession = { LibSshSession() }
+                            )
+                        },
                         httpCredentialsProvider = object : HttpCredentialsFactory {
                             override fun create(git: Git?): HttpCredentialsProvider =
                                 HttpCredentialsProvider(credentialsStateManager, shellManager, git)
