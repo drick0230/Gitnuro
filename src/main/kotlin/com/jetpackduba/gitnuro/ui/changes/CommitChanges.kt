@@ -1,4 +1,4 @@
-package com.jetpackduba.gitnuro.ui
+package com.jetpackduba.gitnuro.ui.changes
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -24,10 +24,22 @@ import com.jetpackduba.gitnuro.AppIcons
 import com.jetpackduba.gitnuro.extensions.*
 import com.jetpackduba.gitnuro.git.DiffEntryType
 import com.jetpackduba.gitnuro.theme.*
+<<<<<<< main:src/main/kotlin/com/jetpackduba/gitnuro/ui/CommitChanges.kt
 import com.jetpackduba.gitnuro.ui.components.*
 import com.jetpackduba.gitnuro.ui.context_menu.ContextMenu
 import com.jetpackduba.gitnuro.ui.context_menu.commitedChangesEntriesContextMenuItems
 import com.jetpackduba.gitnuro.viewmodels.CommitChangesState
+=======
+import com.jetpackduba.gitnuro.ui.SelectedItem
+import com.jetpackduba.gitnuro.ui.components.AvatarImage
+import com.jetpackduba.gitnuro.ui.components.ScrollableLazyColumn
+import com.jetpackduba.gitnuro.ui.components.TooltipText
+import com.jetpackduba.gitnuro.ui.components.gitnuroViewModel
+import com.jetpackduba.gitnuro.ui.context_menu.ContextMenu
+import com.jetpackduba.gitnuro.ui.context_menu.commitedChangesEntriesContextMenuItems
+import com.jetpackduba.gitnuro.viewmodels.CommitChanges
+import com.jetpackduba.gitnuro.viewmodels.CommitChangesStatus
+>>>>>>> Add support multiselect:src/main/kotlin/com/jetpackduba/gitnuro/ui/changes/CommitChanges.kt
 import com.jetpackduba.gitnuro.viewmodels.CommitChangesViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -322,65 +334,77 @@ fun CommitLogChanges(
                     )
                 }
             ) {
-                Column(
-                    modifier = Modifier
-                        .height(40.dp)
-                        .fillMaxWidth()
-                        .handMouseClickable {
-                            onDiffSelected(diffEntry)
-                        }
-                        .backgroundIf(
-                            condition = diffSelected is DiffEntryType.CommitDiff && diffSelected.diffEntry == diffEntry,
-                            color = MaterialTheme.colors.backgroundSelected,
-                        ),
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    Spacer(modifier = Modifier.weight(2f))
-
-                    Row {
-                        Icon(
-                            modifier = Modifier
-                                .padding(horizontal = 8.dp)
-                                .size(16.dp),
-                            imageVector = diffEntry.icon,
-                            contentDescription = null,
-                            tint = diffEntry.iconColor,
-                        )
-
-                        if (diffEntry.parentDirectoryPath.isNotEmpty()) {
-                            Text(
-                                text = diffEntry.parentDirectoryPath.removeSuffix("/"),
-                                modifier = Modifier.weight(1f, fill = false),
-                                maxLines = 1,
-                                softWrap = false,
-                                overflow = TextOverflow.Ellipsis,
-                                style = MaterialTheme.typography.body2,
-                                color = MaterialTheme.colors.onBackgroundSecondary,
-                            )
-
-                            Text(
-                                text = "/",
-                                maxLines = 1,
-                                softWrap = false,
-                                style = MaterialTheme.typography.body2,
-                                overflow = TextOverflow.Visible,
-                                color = MaterialTheme.colors.onBackgroundSecondary,
-                            )
-                        }
-                        Text(
-                            text = diffEntry.fileName,
-                            maxLines = 1,
-                            softWrap = false,
-                            modifier = Modifier.padding(end = 16.dp),
-                            style = MaterialTheme.typography.body2,
-                            color = MaterialTheme.colors.onBackground,
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.weight(2f))
-
-                }
+                CommitLogChangesItem(
+                    diffEntry = diffEntry,
+                    diffSelected = diffSelected,
+                    onDiffSelected = { onDiffSelected(diffEntry) }
+                )
             }
         }
+    }
+}
+
+@Composable
+fun CommitLogChangesItem(
+    diffEntry: DiffEntry,
+    diffSelected: DiffEntryType?,
+    onDiffSelected: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .height(40.dp)
+            .fillMaxWidth()
+            .handMouseClickable {
+                onDiffSelected()
+            }
+            .backgroundIf(
+                condition = diffSelected is DiffEntryType.CommitDiff && diffSelected.diffEntry == diffEntry,
+                color = MaterialTheme.colors.backgroundSelected,
+            ),
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Spacer(modifier = Modifier.weight(2f))
+
+        Row {
+            Icon(
+                modifier = Modifier
+                    .padding(horizontal = 8.dp)
+                    .size(16.dp),
+                imageVector = diffEntry.icon,
+                contentDescription = null,
+                tint = diffEntry.iconColor,
+            )
+
+            if (diffEntry.parentDirectoryPath.isNotEmpty()) {
+                Text(
+                    text = diffEntry.parentDirectoryPath.removeSuffix("/"),
+                    modifier = Modifier.weight(1f, fill = false),
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.body2,
+                    color = MaterialTheme.colors.onBackgroundSecondary,
+                )
+
+                Text(
+                    text = "/",
+                    maxLines = 1,
+                    softWrap = false,
+                    style = MaterialTheme.typography.body2,
+                    overflow = TextOverflow.Visible,
+                    color = MaterialTheme.colors.onBackgroundSecondary,
+                )
+            }
+            Text(
+                text = diffEntry.fileName,
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.padding(end = 16.dp),
+                style = MaterialTheme.typography.body2,
+                color = MaterialTheme.colors.onBackground,
+            )
+        }
+
+        Spacer(modifier = Modifier.weight(2f))
     }
 }
