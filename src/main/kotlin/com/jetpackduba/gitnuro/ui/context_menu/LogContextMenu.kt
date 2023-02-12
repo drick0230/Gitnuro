@@ -14,11 +14,19 @@ fun logContextMenu(
     onResetBranch: () -> Unit,
     onRebaseInteractive: () -> Unit,
     isLastCommit: Boolean,
+    showSquashCommits: Boolean,
+    onSquashCommits: () -> Unit,
 ) = mutableListOf<ContextMenuElement>().apply {
     addContextMenu(
         label = "Checkout commit",
         icon = { painterResource(AppIcons.START) },
         onClick = onCheckoutCommit
+    )
+    addContextMenu(
+        label = "Squash commits",
+        icon = { painterResource("branch.svg") },
+        isVisible = showSquashCommits,
+        onClick = onSquashCommits
     )
     addContextMenu(
         label = "Create branch",

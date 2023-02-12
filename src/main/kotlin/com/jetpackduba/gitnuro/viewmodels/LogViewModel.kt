@@ -12,6 +12,7 @@ import com.jetpackduba.gitnuro.git.branches.*
 import com.jetpackduba.gitnuro.git.graph.GraphCommitList
 import com.jetpackduba.gitnuro.git.graph.GraphNode
 import com.jetpackduba.gitnuro.git.log.*
+import com.jetpackduba.gitnuro.git.rebase.GetRebaseLinesFullMessageUseCase
 import com.jetpackduba.gitnuro.git.rebase.RebaseBranchUseCase
 import com.jetpackduba.gitnuro.git.rebase.StartRebaseInteractiveUseCase
 import com.jetpackduba.gitnuro.git.remote_operations.DeleteRemoteBranchUseCase
@@ -28,8 +29,11 @@ import com.jetpackduba.gitnuro.ui.log.LogDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.api.RebaseCommand.InteractiveHandler
 import org.eclipse.jgit.api.errors.CheckoutConflictException
+import org.eclipse.jgit.lib.RebaseTodoLine
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.revwalk.RevCommit
 import javax.inject.Inject
@@ -67,6 +71,7 @@ class LogViewModel @Inject constructor(
     private val deleteTagUseCase: DeleteTagUseCase,
     private val rebaseBranchUseCase: RebaseBranchUseCase,
     private val startRebaseInteractiveUseCase: StartRebaseInteractiveUseCase,
+    private val getRebaseLinesFullMessageUseCase: GetRebaseLinesFullMessageUseCase,
     private val tabState: TabState,
     private val appSettings: AppSettings,
     private val tabScope: CoroutineScope,
@@ -328,6 +333,29 @@ class LogViewModel @Inject constructor(
             logSearchFilterResultsValue.index
         } else
             NONE_MATCHING_INDEX
+    }
+
+    fun squashCommits() = tabState.runOperation(
+        refreshType = RefreshType.NONE,
+    ) {
+        val selectedItem = tabState.selectedItem.value
+        val log = logStatus.value
+
+        if (selectedItem is SelectedItem.MultiCommitBasedItem && log is LogStatus.Loaded) {
+            val firstCommit = selectedItem.itemList
+                .sortedBy { it.commitTime }
+                .minBy { it.commitTime }
+
+            val firstCommitIndex = log.plotCommitList.indexOf(firstCommit)
+            val upstreamCommit = log.plotCommitList[firstCommitIndex + 1]
+
+            tabState.emitNewTaskEvent(
+                TaskEvent.SquashCommits(
+                    commits = selectedItem.itemList,
+                    upstreamCommit = upstreamCommit
+                )
+            )
+        }
     }
 
     fun selectLogLine(

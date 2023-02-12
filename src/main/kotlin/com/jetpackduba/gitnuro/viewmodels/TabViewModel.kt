@@ -56,6 +56,7 @@ class TabViewModel @Inject constructor(
     private val openRepositoryUseCase: OpenRepositoryUseCase,
     private val openSubmoduleRepositoryUseCase: OpenSubmoduleRepositoryUseCase,
     private val diffViewModelProvider: Provider<DiffViewModel>,
+    private val squashCommitsViewModelProvider: Provider<SquashCommitsViewModel>,
     private val historyViewModelProvider: Provider<HistoryViewModel>,
     private val authorViewModelProvider: Provider<AuthorViewModel>,
     private val tabState: TabState,
@@ -77,6 +78,9 @@ class TabViewModel @Inject constructor(
     val errorsManager: ErrorsManager = tabState.errorsManager
     val selectedItem: StateFlow<SelectedItem> = tabState.selectedItem
     var diffViewModel: DiffViewModel? = null
+
+    var squashCommitsViewModel: SquashCommitsViewModel? = null
+        private set
 
     private val _repositorySelectionStatus = MutableStateFlow<RepositorySelectionStatus>(RepositorySelectionStatus.None)
     val repositorySelectionStatus: StateFlow<RepositorySelectionStatus>
@@ -126,6 +130,14 @@ class TabViewModel @Inject constructor(
                     loadAuthorInfo(tabState.git)
                 }
             }
+            launch {
+                tabState.taskEvent.collect { taskEvent ->
+                    when (taskEvent) {
+                        is TaskEvent.SquashCommits -> onSquashCommits(taskEvent)
+                        else -> Unit
+                    }
+                }
+            }
 
             launch {
                 errorsManager.error.collect {
@@ -143,6 +155,11 @@ class TabViewModel @Inject constructor(
      */
     fun openAnotherRepository(directory: String, current: TabInformation) {
         tabsManager.addNewTabFromPath(directory, true, current)
+    }
+
+    private suspend fun onSquashCommits(taskEvent: TaskEvent.SquashCommits) {
+        squashCommitsViewModel = squashCommitsViewModelProvider.get()
+        squashCommitsViewModel?.startSquash(taskEvent.commits, taskEvent.upstreamCommit)
     }
 
     fun openRepository(directory: String) {
@@ -204,6 +221,20 @@ class TabViewModel @Inject constructor(
     fun closeAuthorInfoDialog() {
         _showAuthorInfo.value = false
         authorViewModel = null
+    }
+
+    private fun onRepositoryStateChanged(newRepoState: RepositoryState) {
+        if (newRepoState != RepositoryState.REBASING_INTERACTIVE) {
+            if (rebaseInteractiveViewModel != null) {
+                rebaseInteractiveViewModel?.cancel()
+                rebaseInteractiveViewModel = null
+            }
+
+            if (newRepoState != RepositoryState.SAFE && squashCommitsViewModel != null) {
+                squashCommitsViewModel?.cancel()
+                squashCommitsViewModel = null
+            }
+        }
     }
 
     private suspend fun watchRepositoryChanges(git: Git) = tabScope.launch(Dispatchers.IO) {
@@ -419,6 +450,14 @@ class TabViewModel @Inject constructor(
         Desktop.getDesktop().open(git.repository.workTree)
     }
 
+    fun cancelRebaseInteractive() = tabState.safeProcessing(
+        refreshType = RefreshType.ALL_DATA,
+    ) { git ->
+        abortRebaseUseCase(git)
+
+        // shouldn't be necessary but just to make sure
+        rebaseInteractiveViewModel = null
+        squashCommitsViewModel = null
     fun gpgCredentialsAccepted(password: String) {
         credentialsStateManager.updateState(CredentialsAccepted.GpgCredentialsAccepted(password))
     }

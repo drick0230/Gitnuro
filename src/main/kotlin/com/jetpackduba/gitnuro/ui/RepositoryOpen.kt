@@ -135,8 +135,11 @@ fun RepositoryOpenPage(
                         }
                     }
             ) {
+                val squashCommitsViewModel = tabViewModel.squashCommitsViewModel
                 if (rebaseInteractiveState == RebaseInteractiveState.AwaitingInteraction) {
                     RebaseInteractive()
+                } else if (repositoryState == RepositoryState.REBASING_INTERACTIVE && squashCommitsViewModel != null) {
+                    SquashCommits(squashCommitsViewModel)
                 } else {
                     val currentTabInformation = LocalTabScope.current
                     Column(modifier = Modifier.weight(1f)) {

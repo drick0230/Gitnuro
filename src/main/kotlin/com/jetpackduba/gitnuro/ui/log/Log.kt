@@ -477,6 +477,8 @@ fun MessagesList(
                     logViewModel.selectLogLine(graphNode, keyScope.isCtrlPressed, keyScope.isShiftPressed)
                 },
                 onChangeDefaultUpstreamBranch = { onShowLogDialog(LogDialog.ChangeDefaultBranch(it)) }
+                onSquashCommits = { logViewModel.squashCommits() },
+                showSquashCommits = selectedItem is SelectedItem.MultiCommitBasedItem && selectedItem.itemList.size > 1
             )
         }
 
@@ -818,6 +820,8 @@ fun CommitLine(
     onRebaseInteractive: () -> Unit,
     onChangeDefaultUpstreamBranch: (Ref) -> Unit,
     horizontalScrollState: ScrollState,
+    onSquashCommits: () -> Unit,
+    showSquashCommits: Boolean,
 ) {
     val isLastCommitOfCurrentBranch = currentBranch?.objectId?.name == graphNode.id.name
 
@@ -832,6 +836,8 @@ fun CommitLine(
                 onRebaseInteractive = onRebaseInteractive,
                 onResetBranch = { resetBranch() },
                 isLastCommit = isLastCommitOfCurrentBranch
+                onSquashCommits = { onSquashCommits() },
+                showSquashCommits = showSquashCommits,
             )
         },
     ) {
