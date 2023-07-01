@@ -2,7 +2,7 @@
 
 ## Installing libssh
 
-Gitnuro depends on libssh being present as an external, native library (
+Gitnuro depends on libssh (>=0.10.5) being present as an external, native library (
 using [JNA](https://github.com/java-native-access/jna)).
 While the release GitHub workflow packages it automatically, you'll need to install it manually when developing locally,
 such that it's available on the `$PATH`. See [here](https://www.libssh.org/get-it/) for one-liner installation
@@ -12,9 +12,9 @@ main project directory (next to `LICENSE`) or elsewhere on your `$PATH`.
 ## Setting up an IDE
 
 If you don't have another preference, the recommendation is to download and install
-[IntelliJ IDEA Community Edition](https://www.jetbrains.com/idea/download/)
+[IntelliJ IDEA Community Edition (>=2023.1.3)](https://www.jetbrains.com/idea/download/)
 (possibly through the JetBrains Toolbox, if you have it already) as well as the
-[Compose Multiplatform IDE Support](https://plugins.jetbrains.com/plugin/16541-compose-multiplatform-ide-support)
+[Compose Multiplatform IDE Support (>=1.4.1)](https://plugins.jetbrains.com/plugin/16541-compose-multiplatform-ide-support)
 plugin.
 
 ## Alternative: Setting up JDK for use on CLI
