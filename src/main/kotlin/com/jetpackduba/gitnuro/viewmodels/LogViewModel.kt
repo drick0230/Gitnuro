@@ -10,6 +10,7 @@ import com.jetpackduba.gitnuro.git.branches.*
 import com.jetpackduba.gitnuro.git.graph.GraphCommitList
 import com.jetpackduba.gitnuro.git.graph.GraphNode
 import com.jetpackduba.gitnuro.git.log.*
+import com.jetpackduba.gitnuro.git.rebase.GetRebaseLinesFullMessageUseCase
 import com.jetpackduba.gitnuro.git.rebase.RebaseBranchUseCase
 import com.jetpackduba.gitnuro.git.remote_operations.DeleteRemoteBranchUseCase
 import com.jetpackduba.gitnuro.git.remote_operations.PullFromSpecificBranchUseCase
@@ -25,8 +26,11 @@ import com.jetpackduba.gitnuro.ui.log.LogDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.api.RebaseCommand.InteractiveHandler
 import org.eclipse.jgit.api.errors.CheckoutConflictException
+import org.eclipse.jgit.lib.RebaseTodoLine
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.revwalk.RevCommit
 import javax.inject.Inject
@@ -63,6 +67,7 @@ class LogViewModel @Inject constructor(
     private val createTagOnCommitUseCase: CreateTagOnCommitUseCase,
     private val deleteTagUseCase: DeleteTagUseCase,
     private val rebaseBranchUseCase: RebaseBranchUseCase,
+    private val getRebaseLinesFullMessageUseCase: GetRebaseLinesFullMessageUseCase,
     private val tabState: TabState,
     private val appSettings: AppSettings,
     private val tabScope: CoroutineScope,
@@ -305,11 +310,114 @@ class LogViewModel @Inject constructor(
             NONE_MATCHING_INDEX
     }
 
-    fun selectLogLine(commit: GraphNode) = tabState.runOperation(
+    fun squashCommits() = tabState.runOperation(
         refreshType = RefreshType.NONE,
     ) {
-        tabState.newSelectedItem(SelectedItem.Commit(commit))
+        val selectedItem = tabState.selectedItem.value
+        val log = logStatus.value
 
+        if (selectedItem is SelectedItem.MultiCommitBasedItem && log is LogStatus.Loaded) {
+            val firstCommit = selectedItem.itemList
+                .sortedBy { it.commitTime }
+                .minBy { it.commitTime }
+
+            val firstCommitIndex = log.plotCommitList.indexOf(firstCommit)
+            val upstreamCommit = log.plotCommitList[firstCommitIndex + 1]
+
+            tabState.emitNewTaskEvent(
+                TaskEvent.SquashCommits(
+                    commits = selectedItem.itemList,
+                    upstreamCommit = upstreamCommit
+                )
+            )
+        }
+    }
+
+    fun selectLogLine(
+        commit: GraphNode,
+        multiSelect: Boolean,
+        rangeSelect: Boolean
+    ) = tabState.runOperation(
+        refreshType = RefreshType.NONE,
+    ) {
+        when {
+            multiSelect -> selectMultiLogLines(commit)
+            rangeSelect -> selectRangeLogLines(commit)
+            else -> selectSingleLogLine(commit)
+        }
+
+        setLogSearchFilterByCommit(commit)
+    }
+
+    // like with ctrl pressed
+    private suspend fun selectMultiLogLines(commit: GraphNode) {
+        when (val selectedItem = tabState.selectedItem.value) {
+            is SelectedItem.None,
+            is SelectedItem.UncommitedChanges -> selectSingleLogLine(commit)
+            is SelectedItem.CommitBasedItem -> {
+                if (selectedItem.revCommit == commit) {
+                    tabState.noneSelected()
+                } else {
+                    val list = listOf(selectedItem.revCommit, commit)
+                    tabState.newSelectedItem(SelectedItem.MultiCommitBasedItem(list, selectedItem.revCommit))
+                }
+            }
+            is SelectedItem.MultiCommitBasedItem -> {
+                val revList = selectedItem.itemList
+                val list = if (revList.contains(commit)) {
+                    revList - commit
+                } else {
+                    revList + commit
+                }
+
+                val item = if (list.size > 1) {
+                    SelectedItem.MultiCommitBasedItem(list, list.maxBy { it.commitTime })
+                } else {
+                    SelectedItem.Commit(list.first())
+                }
+
+                tabState.newSelectedItem(item)
+            }
+        }
+    }
+
+    // like with shift pressed
+    private suspend fun selectRangeLogLines(commit: GraphNode) {
+        when (val selectedItem = tabState.selectedItem.value) {
+            is SelectedItem.None,
+            is SelectedItem.UncommitedChanges -> selectSingleLogLine(commit)
+            is SelectedItem.CommitBasedItem -> {
+                val list = getRangeCommitsFromOneToOne(selectedItem.revCommit, commit)
+                tabState.newSelectedItem(SelectedItem.MultiCommitBasedItem(list, selectedItem.revCommit))
+            }
+            is SelectedItem.MultiCommitBasedItem -> {
+                val list = getRangeCommitsFromOneToOne(selectedItem.targetCommit, commit)
+                tabState.newSelectedItem(SelectedItem.MultiCommitBasedItem(list, selectedItem.targetCommit))
+            }
+        }
+    }
+
+    private fun getRangeCommitsFromOneToOne(from: RevCommit, to: RevCommit): List<RevCommit> {
+        return if (from != to && logStatus.value is LogStatus.Loaded) {
+            val commitList = (logStatus.value as LogStatus.Loaded).plotCommitList
+
+            val first = commitList.indexOf(from)
+            val last = commitList.indexOf(to)
+            val range = if (first < last) first.rangeTo(last) else last.rangeTo(first)
+
+            println(range)
+
+            commitList.slice(range)
+        } else {
+            listOf(from)
+        }
+    }
+
+    private suspend fun selectSingleLogLine(commit: GraphNode) {
+        tabState.newSelectedItem(SelectedItem.Commit(commit))
+    }
+
+    private fun setLogSearchFilterByCommit(commit: GraphNode) {
         val searchValue = _logSearchFilterResults.value
         if (searchValue is LogSearch.SearchResults) {
             var index = searchValue.commits.indexOf(commit)

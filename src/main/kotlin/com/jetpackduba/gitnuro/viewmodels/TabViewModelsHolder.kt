@@ -15,11 +15,13 @@ class TabViewModelsHolder @Inject constructor(
     stashesViewModel: StashesViewModel,
     submodulesViewModel: SubmodulesViewModel,
     commitChangesViewModel: CommitChangesViewModel,
+    multiCommitChangesViewModel: MultiCommitChangesViewModel,
     cloneViewModel: CloneViewModel,
     settingsViewModel: SettingsViewModel,
     // Dynamic VM
     private val diffViewModelProvider: Provider<DiffViewModel>,
     private val rebaseInteractiveViewModelProvider: Provider<RebaseInteractiveViewModel>,
+    private val squashCommitsViewModel: Provider<SquashCommitsViewModel>,
     private val historyViewModelProvider: Provider<HistoryViewModel>,
     private val authorViewModelProvider: Provider<AuthorViewModel>,
 ) {
@@ -33,6 +35,7 @@ class TabViewModelsHolder @Inject constructor(
         stashesViewModel::class to stashesViewModel,
         submodulesViewModel::class to submodulesViewModel,
         commitChangesViewModel::class to commitChangesViewModel,
+        multiCommitChangesViewModel::class to multiCommitChangesViewModel,
         cloneViewModel::class to cloneViewModel,
         settingsViewModel::class to settingsViewModel,
     )
