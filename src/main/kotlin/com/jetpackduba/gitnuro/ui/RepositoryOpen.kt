@@ -24,8 +24,12 @@ import com.jetpackduba.gitnuro.LocalTabScope
 import com.jetpackduba.gitnuro.extensions.handMouseClickable
 import com.jetpackduba.gitnuro.git.DiffEntryType
 import com.jetpackduba.gitnuro.git.rebase.RebaseInteractiveState
+import com.jetpackduba.gitnuro.git.graph.GraphNode
 import com.jetpackduba.gitnuro.keybindings.KeybindingOption
 import com.jetpackduba.gitnuro.keybindings.matchesBinding
+import com.jetpackduba.gitnuro.ui.changes.CommitChanges
+import com.jetpackduba.gitnuro.ui.changes.MultiCommitChanges
+import com.jetpackduba.gitnuro.ui.changes.UncommitedChanges
 import com.jetpackduba.gitnuro.ui.components.PrimaryButton
 import com.jetpackduba.gitnuro.ui.components.SecondaryButton
 import com.jetpackduba.gitnuro.ui.components.gitnuroDynamicViewModel
@@ -403,7 +407,19 @@ fun MainContentView(
                                     onHistory = { tabViewModel.fileHistory(it) },
                                 )
                             }
-                            SelectedItem.None -> {}
+                            is SelectedItem.MultiCommitBasedItem -> {
+                                MultiCommitChanges(
+                                    selectedItem = selectedItem,
+                                    diffSelected = diffSelected,
+                                    onDiffSelected = { diffEntry ->
+                                        tabViewModel.minimizeBlame()
+                                        tabViewModel.newDiffSelected = DiffEntryType.CommitDiff(diffEntry)
+                                    },
+                                    onBlame = { tabViewModel.blameFile(it) },
+                                    onHistory = { tabViewModel.fileHistory(it) },
+                                )
+                            }
+                            else -> Unit
                         }
                     }
                 }
@@ -436,8 +452,21 @@ fun SplitterScope.repositorySplitter() {
 sealed class SelectedItem {
     object None : SelectedItem()
     object UncommitedChanges : SelectedItem()
+    data class MultiCommitBasedItem(
+        val itemList: List<RevCommit>,
+        val targetCommit: RevCommit,
+    ) : SelectedItem()
     sealed class CommitBasedItem(val revCommit: RevCommit) : SelectedItem()
     class Ref(revCommit: RevCommit) : CommitBasedItem(revCommit)
     class Commit(revCommit: RevCommit) : CommitBasedItem(revCommit)
     class Stash(revCommit: RevCommit) : CommitBasedItem(revCommit)
+}
+
+fun SelectedItem.containCommit(commit: RevCommit): Boolean {
+    return when (this) {
+        is SelectedItem.UncommitedChanges,
+        is SelectedItem.None -> false
+        is SelectedItem.MultiCommitBasedItem -> this.itemList.contains(commit)
+        is SelectedItem.CommitBasedItem -> this.revCommit == commit
+    }
 }

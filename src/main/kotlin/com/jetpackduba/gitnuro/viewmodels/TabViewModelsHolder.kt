@@ -13,6 +13,7 @@ class TabViewModelsHolder @Inject constructor(
     statusViewModel: StatusViewModel,
     menuViewModel: MenuViewModel,
     commitChangesViewModel: CommitChangesViewModel,
+    multiCommitChangesViewModel: MultiCommitChangesViewModel,
     cloneViewModel: CloneViewModel,
     settingsViewModel: SettingsViewModel,
     sidePanelViewModel: SidePanelViewModel,
@@ -31,6 +32,7 @@ class TabViewModelsHolder @Inject constructor(
         statusViewModel::class to statusViewModel,
         menuViewModel::class to menuViewModel,
         commitChangesViewModel::class to commitChangesViewModel,
+        multiCommitChangesViewModel::class to multiCommitChangesViewModel,
         cloneViewModel::class to cloneViewModel,
         settingsViewModel::class to settingsViewModel,
     )
